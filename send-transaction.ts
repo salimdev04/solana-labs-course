@@ -1,5 +1,8 @@
+import dotenv from "dotenv";
+dotenv.config();
+
 import { getKeypairFromEnvironment } from "@solana-developers/helpers";
-import { Connection, LAMPORTS_PER_SOL, PublicKey, clusterApiUrl } from "@solana/web3.js";
+import { Connection, Keypair, LAMPORTS_PER_SOL, PublicKey, SystemProgram, Transaction, clusterApiUrl, sendAndConfirmTransaction } from "@solana/web3.js";
 
 const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
 
@@ -14,6 +17,7 @@ if (!address) {
   process.exit(1);
 }
 
+// Pass the parsedSecretKey to getKeypairFromEnvironment
 const senderKeypair = getKeypairFromEnvironment("SECRET_KEY");
 if (!senderKeypair) {
   console.error("Sender keypair not found in environment variables.");
@@ -28,3 +32,19 @@ console.log(`Balance of ${publicKey.toBase58()}: ${balance} lamports`);
 
 const balanceInSol = balance / LAMPORTS_PER_SOL;
 console.log(`Balance of ${publicKey.toBase58()}: ${balanceInSol} SOL`);
+
+const transaction = new Transaction();
+
+const LAMPORTS_TO_SEND = 5000;
+
+const transactionInstruction = SystemProgram.transfer({
+  fromPubkey: senderKeypair.publicKey,
+  toPubkey: publicKey,
+  lamports: LAMPORTS_TO_SEND,
+});
+
+transaction.add(transactionInstruction);
+
+const signature = await sendAndConfirmTransaction(connection, transaction, [senderKeypair]);
+console.log("Transaction signature:", signature);
+console.log(`Sent ${LAMPORTS_TO_SEND} lamports to ${publicKey.toBase58()}`);
